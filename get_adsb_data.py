@@ -6,34 +6,21 @@ import json
 import requests
 import sys
 import time
-from pathlib import Path
 
 from absl import logging
 
 from plane import Plane
-
-ADSB_UPDATE_WAIT_SEC = 20  # [s]
-ADSB_CATEGORY_HEAVY = "A5"  # string
-LOGFILE = "/home/jared/repos/planespotting/20221208_planelog.txt"
-LOG_DIR = "/home/jared/data/planespotting/20221212"
+from utils import write_simple_msg_to_log, write_single_adsb_response_to_log
 
 # constants
-SECS2MINS = 1 / 60
-
-
-def write_to_log(planemsg):
-
-    outmsg = planemsg + "\n"
-
-    with open(LOGFILE, "at") as f:
-
-        f.write(outmsg)
+ADSB_CATEGORY_HEAVY = "A5"  # string
+ADSB_UPDATE_WAIT_SEC = 20  # [s]
+URL_SFO_25_MILES = "https://adsbexchange-com1.p.rapidapi.com/v2/lat/37.5690174407/lon/-122.27613102/dist/25/"  # string
 
 
 def get_request_and_filter_by_category(url, headers, category=ADSB_CATEGORY_HEAVY):
     """
     send http request to ADSBexchange API host and filter by ADSB category
-
     """
 
     print("getting heavy data")
@@ -44,20 +31,13 @@ def get_request_and_filter_by_category(url, headers, category=ADSB_CATEGORY_HEAV
     return heavies
 
 
-def write_single_adsb_response_to_log(plane):
-    outpath = Path(LOG_DIR, plane.status["t"], plane.registry + ".txt")
-    if not outpath.exists():
-        if not outpath.parent.exists():
-            outpath.parent.mkdir(parents=True)
-        outpath.touch()
-    with outpath.open("at") as f:
-        f.write(json.dumps(plane.status))
-
-
 def get_adsb_data(key):
 
-    """ """
-    url = "https://adsbexchange-com1.p.rapidapi.com/v2/lat/37.5690174407/lon/-122.27613102/dist/25/"
+    """
+    main loop for retrieving and filtering adsb data
+    """
+
+    url = URL_SFO_25_MILES
 
     headers = {
         "X-RapidAPI-Key": key,
@@ -67,7 +47,7 @@ def get_adsb_data(key):
     ignored_planes = set()
     timed_out_registries = set()
     watched_plane_registries = set()
-    watched_type_prefixes = ("B74", "B78", "A38", "A35", "B77")
+    watched_type_prefixes = ("B74", "B77", "A38", "A35", "A34")
     watched_planes = {}
     cnt = 0
 
@@ -76,7 +56,7 @@ def get_adsb_data(key):
         start_time = time.monotonic()
         ignored = 0
         timed_out = 0
-
+        currently_watching = 0
         heavies = get_request_and_filter_by_category(url, headers, ADSB_CATEGORY_HEAVY)
 
         for planedict in heavies:
@@ -95,6 +75,7 @@ def get_adsb_data(key):
                 if plane.position_updated:
                     write_single_adsb_response_to_log(plane)
                     watched_planes[registry] = plane
+                    currently_watching += 1
                     continue
 
                 if plane.stale_count > 10:
@@ -110,7 +91,7 @@ def get_adsb_data(key):
                     watched_planes[registry] = plane
                     write_single_adsb_response_to_log(plane)
                     printstr = f"NEW PLANE! (watched) local time: {time.asctime()}, type: {planedict['t']}, flight: {planedict['flight']}, lat: {planedict['lat']}, lon: {planedict['lon']}, alt: {planedict['alt_baro']}"
-                    write_to_log(printstr)
+                    write_simple_msg_to_log(printstr)
                 except Exception as e:
                     logging.error(f"{time.asctime()} couldn't add {planedict}, exception: {e}")
             else:
@@ -118,15 +99,15 @@ def get_adsb_data(key):
                     ignored_planes.add(planedict["r"])
                     printstr = f"NEW PLANE! (ignored) local time: {time.asctime()}, type: {planedict['t']}, flight: {planedict['flight']}, lat: {planedict['lat']}, lon: {planedict['lon']}, alt: {planedict['alt_baro']}"
                     print(printstr)
-                    write_to_log(printstr)
+                    write_simple_msg_to_log(printstr)
                     ignored += 1
 
                 except Exception as e:
-                    print(f"exception:{e}, plane: {plane}")
+                    print(f"exception:{e}, planedict: {planedict}")
 
-        printstr = f"{time.asctime()} iteration: {cnt}. saw {len(heavies)} heavy aircraft. watched: {len(watched_plane_registries)}. currently ignoring: {ignored + timed_out}.  total ignored: {len(ignored_planes)} timed_out: {len(timed_out_registries)}, iteration time: {time.monotonic()-start_time}"
+        printstr = f"{time.asctime()} iteration: {cnt}. saw {len(heavies)} heavy aircraft. watched: {currently_watching}. currently ignoring: {ignored + timed_out}.  total ignored: {len(ignored_planes)} timed_out: {len(timed_out_registries)}, iteration time: {time.monotonic()-start_time}"
         print(printstr)
-        write_to_log(printstr)
+        write_simple_msg_to_log(printstr)
         cnt += 1
         print(f"sleeping {ADSB_UPDATE_WAIT_SEC - (time.monotonic() - start_time)} seconds.. ")
         while time.monotonic() - start_time < ADSB_UPDATE_WAIT_SEC:
@@ -134,6 +115,9 @@ def get_adsb_data(key):
 
 
 def main():
+    """
+    entry point for script.
+    """
     key = sys.argv[-1]
     if len(key) != 50:
         logging.error(f"{sys.argv[-1]} not valid adsbexchange rapidapi key. exiting.")

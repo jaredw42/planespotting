@@ -1,22 +1,11 @@
 import time
+from utils import write_simple_msg_to_log
 
 # from get_adsb_data import ADSB_UPDATE_WAIT_SEC, SECS2MINS, write_to_log
 ADSB_UPDATE_WAIT_SEC = 20  # [s]
 ADSB_CATEGORY_HEAVY = "A5"  # string
-LOGFILE = "/home/jared/repos/planespotting/20221208_planelog.txt"
-LOG_DIR = "/home/jared/data/planespotting/20221212"
 
-# constants
 SECS2MINS = 1 / 60
-
-
-def write_to_log(planemsg):
-
-    outmsg = planemsg + "\n"
-
-    with open(LOGFILE, "at") as f:
-
-        f.write(outmsg)
 
 
 class Plane:
@@ -68,7 +57,7 @@ class Plane:
 
         if self.lat != self.prev_lat or self.lon != self.prev_lon:
             printstr = f"position update: flight:{self.flight}, t-r: {self.type}-{self.registry},  time: {self.time} now at lat:{self.lat}, lon:{self.lon}, alt:{self.alt_baro}, hdg: {self.nav_hdg}, vertical_speed (ft/min): {int(self.vertical_speed)}"
-            write_to_log(printstr)
+            write_simple_msg_to_log(printstr)
             print(printstr)
             self.prev_lat = self.lat
             self.prev_lon = self.lon
@@ -81,6 +70,11 @@ class Plane:
                 self.previous_altitudes.append(self.alt_baro)
                 self.calculate_vertical_speed()
                 self.previous_altitudes = self.previous_altitudes[0:10]
+
+            else:
+                if self.previous_altitudes:
+                    self.previous_altitudes = []
+                    self.vertical_speed = 0
 
         else:
             self.position_updated = False
