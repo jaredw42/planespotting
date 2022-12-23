@@ -3,6 +3,7 @@ get_adsb_data.py
 python script for interacting with adsbexchange API.
 """
 import json
+import os
 import requests
 import sys
 import time
@@ -15,10 +16,15 @@ from utils import write_simple_msg_to_log, write_single_adsb_response_to_log
 # constants
 ADSB_CATEGORY_HEAVY = "A5"  # string
 ADSB_UPDATE_WAIT_SEC = 20  # [s]
-URL_SFO_25_MILES = "https://adsbexchange-com1.p.rapidapi.com/v2/lat/37.5690174407/lon/-122.27613102/dist/25/"  # string
 
+AEROAPI_BASE_URL = "https://aeroapi.flightaware.com/aeroapi"
+AEROAPI_KEY = os.environ["AEROAPI_KEY"]
+AEROAPI = requests.Session()
+AEROAPI.headers.update({"x-apikey": AEROAPI_KEY})
+AX_API_URL_SFO_25_MILES = "https://adsbexchange-com1.p.rapidapi.com/v2/lat/37.5690174407/lon/-122.27613102/dist/25/"  # string
+FA_API_URL = "https://aeroapi.flightaware.com/aeroapi"
 
-def get_request_and_filter_by_category(url, headers, category=ADSB_CATEGORY_HEAVY):
+def get_ax_request_and_filter_by_category(url, headers, category=ADSB_CATEGORY_HEAVY):
     """
     send http request to ADSBexchange API host and filter by ADSB category
     """
@@ -30,19 +36,25 @@ def get_request_and_filter_by_category(url, headers, category=ADSB_CATEGORY_HEAV
     heavies = [json.loads(x) for x in heavies]
     return heavies
 
+def get_aeroapi_request_and_filter_by_category()
 
-def get_adsb_data(key):
+def get_adsb_data(key, adsb_source):
 
     """
     main loop for retrieving and filtering adsb data
     """
 
-    url = URL_SFO_25_MILES
+    logging.info(f"starting loop, adsb source: {adsb_source}")
 
-    headers = {
-        "X-RapidAPI-Key": key,
-        "X-RapidAPI-Host": "adsbexchange-com1.p.rapidapi.com",
-    }
+    if adsb_source == "aeroapi":
+        pass
+    else:
+
+        url = AX_API_URL_SFO_25_MILES
+        headers = {
+            "X-RapidAPI-Key": key,
+            "X-RapidAPI-Host": "adsbexchange-com1.p.rapidapi.com",
+        }
 
     ignored_planes = set()
     timed_out_registries = set()
@@ -57,7 +69,10 @@ def get_adsb_data(key):
         ignored = 0
         timed_out = 0
         currently_watching = 0
-        heavies = get_request_and_filter_by_category(url, headers, ADSB_CATEGORY_HEAVY)
+        if adsb_source == "aeroapi":
+            pass
+        else:
+            heavies = get_ax_request_and_filter_by_category(url, headers, ADSB_CATEGORY_HEAVY)
 
         for planedict in heavies:
             registry = planedict["r"]
@@ -118,12 +133,13 @@ def main():
     """
     entry point for script.
     """
+    adsb_source = "aeroapi"
     key = sys.argv[-1]
     if len(key) != 50:
-        logging.error(f"{sys.argv[-1]} not valid adsbexchange rapidapi key. exiting.")
-        exit(1)
+        logging.warning(f"{sys.argv[-1]} not valid adsbexchange rapidapi key. trying aeroapi.")
+        adsb_source = "adsbx"
 
-    get_adsb_data(key)
+    get_adsb_data(key, adsb_source)
 
 
 main()

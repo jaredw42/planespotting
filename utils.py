@@ -4,11 +4,18 @@ utility functions shared by modules
 """
 
 import json
+import os
 from pathlib import Path
+from threading import local, Thread
+from multiprocessing import Process, Manager
+
+from adsb_radio_listener import AdsbRadioStreamer, LOCAL_IP, EXTERNAL_IP, READSB_JSON_PORT
 
 
-DEFAULT_LOG_DIR = Path("/home/jared/data/planespotting/20221213")
+DEFAULT_LOG_DIR = Path("/home/jared/data/planespotting/20221220")
+DEFAULT_LOG_DIR = Path("/Users/jwilson/data/planespotting/20221220")
 DEFAULT_SIMPLE_LOG_NAME = Path(DEFAULT_LOG_DIR, "planespotting_msgs.txt")
+DEFAULT_HEX_LOG_PATH = Path(os.getcwd(), "resources/known_adsb_hex_codes.json")
 
 
 def write_simple_msg_to_log(msg, log_file=DEFAULT_SIMPLE_LOG_NAME):
@@ -42,6 +49,28 @@ def write_single_adsb_response_to_log(plane, log_dir=DEFAULT_LOG_DIR):
         if not writestr.endswith("\n"):
             writestr += "\n"
         f.write(writestr)
+
+
+def start_adsb_radio_listener(ip=LOCAL_IP, port=READSB_JSON_PORT):
+
+    manager = Manager()
+    handled_dict = manager.dict()
+    streamer = Thread(
+        target=AdsbRadioStreamer,
+        daemon=True,
+        args=(
+            handled_dict,
+            ip,
+            port,
+        ),
+    )
+    # streamer = Process(target=AdsbRadioStreamer )
+    # threadLocal =
+    streamer.start()
+    # streamer.run()
+    stuff = [streamer, handled_dict]
+
+    return stuff
 
 
 if __name__ == "__main__":

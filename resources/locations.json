@@ -60,6 +60,15 @@
             -122.266674,
             25.9
         ]
+    },
+    {
+      "name":"emeryville",
+      "type": "point",
+      "coordinates":[
+        37.82432,
+        -122.2884593,
+        0
+      ]
     }
   ],
   "air_aois": [
