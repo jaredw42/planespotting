@@ -129,7 +129,7 @@ def monitor_adsb_radio_traffic():
                 for adsbhex in timed_out:
                     goodbye = tracked_planes[adsbhex]
                     logging.info(f"{goodbye.flight} ({goodbye.type} has timed out.")
-                    del goodbye
+                    del tracked_planes[adsbhex]
         else:
             logging.debug(
                 f"monitoring {len(tracked_planes)} A5 aircraft. monitor running for {time.time() - stream_start_time:.1f}s. A5 aircraft seen: {total_seen}"
