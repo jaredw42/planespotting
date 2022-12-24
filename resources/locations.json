@@ -84,5 +84,15 @@
         "floor": 0,
         "ceiling": 2500
 
-  }]
+  }],
+
+  "emeryville":     {
+    "name":"emeryville",
+    "type": "point",
+    "coordinates":[
+      37.82432,
+      -122.2884593,
+      0
+    ]
+  }
 }

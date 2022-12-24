@@ -17,7 +17,7 @@ LOCAL_IP = "192.168.0.151"
 EXTERNAL_IP = "23.93.23.15"
 READSB_JSON_PORT = 8181
 
-STREAM_TIMEOUT_SEC = 30  # [s]
+STREAM_TIMEOUT_SEC = 60  # [s]
 
 
 class AdsbRadioStreamer(Thread):

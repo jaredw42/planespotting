@@ -95,12 +95,35 @@ class Plane:
 
     def calculate_distance_to_point(self, coords):
 
-        ned = geodetic2ned(self.lat, self.lon, self.alt_baro, coords[0], coords[1], coords[2])
+        ned = geodetic2ned(self.lat, self.lon, self.alt_baro, coords[0], coords[1], coords[2], deg=True)
 
-        distance_2d = math.sqrt(ned[0]**2 + ned[1]**2)
-        distance_3d = math.sqrt(ned[0]**2 + ned[1]**2 + ned[2]**2)
+        distance_2d = math.sqrt(ned[0] ** 2 + ned[1] ** 2)
+        distance_3d = math.sqrt(ned[0] ** 2 + ned[1] ** 2 + ned[2] ** 2)
 
-        return distance_3d
+        distance = {"north": ned[0], "east": ned[1], "down": ned[2], "horizontal": distance_2d, "spherical": distance_3d}
+
+        return distance
+
+    def calculate_bearing_from_point(self, coords):
+        """
+        θ = lat, L = lon
+        X = cos θb * sin ∆L
+        Y = cos θa * sin θb – sin θa * cos θb * cos ∆L
+        β = atan2(X,Y) [radians]
+        a = coords
+        b = self
+        """
+
+        X = math.cos(self.lat) * math.sin(self.lon - coords[1])
+        Y = (math.cos(coords[0]) * math.sin(self.lat)) - (
+            math.sin(coords[0]) * math.cos(self.lat) * math.cos(self.lon - coords[1])
+        )
+
+        bearing = math.atan2(X, Y) * (180 / math.pi)
+        if bearing < 0:
+            bearing = 360 + bearing
+        return bearing
+
 
 if __name__ == "__main__":
     pass
