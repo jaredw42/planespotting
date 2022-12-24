@@ -1,5 +1,8 @@
+import math
 import time
 from utils import write_simple_msg_to_log
+
+from pymap3d import geodetic2ned
 
 # from get_adsb_data import ADSB_UPDATE_WAIT_SEC, SECS2MINS, write_to_log
 ADSB_UPDATE_WAIT_SEC = 20  # [s]
@@ -90,6 +93,14 @@ class Plane:
 
         self.vertical_speed = distance / minutes
 
+    def calculate_distance_to_point(self, coords):
+
+        ned = geodetic2ned(self.lat, self.lon, self.alt_baro, coords[0], coords[1], coords[2])
+
+        distance_2d = math.sqrt(ned[0]**2 + ned[1]**2)
+        distance_3d = math.sqrt(ned[0]**2 + ned[1]**2 + ned[2]**2)
+
+        return distance_3d
 
 if __name__ == "__main__":
     pass
