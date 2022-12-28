@@ -2,7 +2,7 @@
 utils.py
 utility functions shared by modules
 """
-
+import datetime
 import json
 import os
 from pathlib import Path
@@ -12,8 +12,7 @@ from multiprocessing import Process, Manager
 from adsb_radio_listener import AdsbRadioStreamer, LOCAL_IP, EXTERNAL_IP, READSB_JSON_PORT
 
 
-DEFAULT_LOG_DIR = Path("/home/jared/data/planespotting/20221220")
-DEFAULT_LOG_DIR = Path("/Users/jwilson/data/planespotting/20221220")
+DEFAULT_LOG_DIR = Path(Path.home(), f"data/planespotting/ {str(datetime.date.today()).replace('-','')}")
 DEFAULT_SIMPLE_LOG_NAME = Path(DEFAULT_LOG_DIR, "planespotting_msgs.txt")
 DEFAULT_HEX_LOG_PATH = Path(os.getcwd(), "resources/known_adsb_hex_codes.json")
 
@@ -52,6 +51,10 @@ def write_single_adsb_response_to_log(plane, log_dir=DEFAULT_LOG_DIR):
 
 
 def start_adsb_radio_listener(ip=LOCAL_IP, port=READSB_JSON_PORT):
+    """
+    start an AdsbRadioListener in a new thread and create a managed dict
+    to share stream data outside of thread
+    """
 
     manager = Manager()
     handled_dict = manager.dict()
@@ -64,13 +67,9 @@ def start_adsb_radio_listener(ip=LOCAL_IP, port=READSB_JSON_PORT):
             port,
         ),
     )
-    # streamer = Process(target=AdsbRadioStreamer )
-    # threadLocal =
-    streamer.start()
-    # streamer.run()
-    stuff = [streamer, handled_dict]
 
-    return stuff
+    streamer.start()
+    return [streamer, handled_dict]
 
 
 if __name__ == "__main__":
