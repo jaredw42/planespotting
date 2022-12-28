@@ -2,8 +2,10 @@
 monitor_adsb_radio_traffic.py
 starts an AdsbRadioStreamer and watches for aircraft of interest.
 calculates range and bearing to each aircraft.
+assumes ADSB json stream has been fed database file with registry/type information
 """
 from copy import copy
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -24,6 +26,8 @@ from utils import (
 ADSB_CATEGORY_HEAVY = "A5"
 MONITORED_CATEGORIES = [ADSB_CATEGORY_HEAVY]
 logging.set_verbosity(logging.DEBUG)
+
+LOGGER_INFO_OUTPUT_SECS = 30  # [s]
 
 AEROAPI_BASE_URL = "https://aeroapi.flightaware.com/aeroapi"
 AEROAPI_KEY = os.environ["AEROAPI_KEY"]
@@ -75,7 +79,9 @@ def update_tracked_plane_information(plane: Plane, data: dict, location) -> None
     plane.update_status(data)
     distance = plane.calculate_distance_to_point(coords)["spherical"] / 1000.0
     bearing = plane.calculate_bearing_from_point(coords)
-    logging.info(f"flight {plane.flight} ({plane.type}) is {distance:.1f} km, {bearing:.1f} deg from {name} ")
+    logging.info(
+        f"flight {plane.flight} ({plane.type}) is {distance:.1f} km, {bearing:.1f} deg from {name}. Alt: {plane.alt_baro}, VS: {plane.vertical_speed:.1f} "
+    )
 
 
 def monitor_adsb_radio_traffic():
@@ -83,9 +89,7 @@ def monitor_adsb_radio_traffic():
     entry point for monitoring script
     """
 
-    stuff = start_adsb_radio_listener()
-    stream = stuff[0]
-    streamdata = stuff[1]
+    adsbstreamer, streamdata = start_adsb_radio_listener(ip="192.168.0.151")
     stream_start_time = time.time()
 
     tracked_planes = {}
@@ -93,9 +97,8 @@ def monitor_adsb_radio_traffic():
     locations = get_aoi_locations()
     monitored_loc = locations[location_name]
     total_seen = 0
-
-    while stream:
-        updated = False
+    log_update_t = 0
+    while adsbstreamer:
         # streamdata is constantly updated and not thread-safe.
         # Make a copy in case an aircraft's broadcast goes stale during this iteration
         data = copy(streamdata)
@@ -110,30 +113,26 @@ def monitor_adsb_radio_traffic():
                             try:
                                 update_tracked_plane_information(tracked_planes[adsbhex], adsb, monitored_loc)
                                 write_single_adsb_response_to_log(tracked_planes[adsbhex])
-                                updated = True
                             except Exception as e:
-                                logging.info(f"couldn't update {adsb}, {e}")
+                                logging.error(f"couldn't update {adsb}, {e}")
                     else:
                         tracked_planes[adsbhex] = Plane(adsb["r"], adsb["flight"], adsb)
                         logging.info(
                             f"created new tracking entry: flight: {adsb['flight']}, type: {adsb['t']}, registry: {adsb['r']} "
                         )
-                        updated = True
-                        total_seen +=1
-        if not updated:
-            logging.debug(
-                f"no A5 aircraft updates. monitor running for {time.time() - stream_start_time:.1f}s. A5 aircraft seen: {total_seen}"
-            )
-            timed_out = [adsbhex for adsbhex in tracked_planes if adsbhex not in seen_adsb_hexcodes]
-            if timed_out:
-                for adsbhex in timed_out:
-                    goodbye = tracked_planes[adsbhex]
-                    logging.info(f"{goodbye.flight} ({goodbye.type} has timed out.")
-                    del tracked_planes[adsbhex]
-        else:
+                        total_seen += 1
+        if time.monotonic() - log_update_t > LOGGER_INFO_OUTPUT_SECS:
             logging.debug(
                 f"monitoring {len(tracked_planes)} A5 aircraft. monitor running for {time.time() - stream_start_time:.1f}s. A5 aircraft seen: {total_seen}"
             )
+            log_update_t = time.monotonic()
+
+        timed_out = [adsbhex for adsbhex in tracked_planes if adsbhex not in seen_adsb_hexcodes]
+        if timed_out:
+            for adsbhex in timed_out:
+                goodbye = tracked_planes[adsbhex]
+                logging.info(f"{goodbye.flight} ({goodbye.type} has timed out.")
+                del tracked_planes[adsbhex]
         time.sleep(2)
 
 
