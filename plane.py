@@ -13,6 +13,8 @@ from pymap3d import geodetic2ned
 ADSB_CATEGORY_HEAVY = "A5"  # string
 SECS2MINS = 1 / 60
 
+REQUIRED_STATUS_UPDATE_KEYS = ["lat", "lon", "alt_baro"]
+
 
 class Plane:
     """
@@ -28,7 +30,7 @@ class Plane:
         self.time = 0
         self.lat = 0
         self.lon = 0
-        self.alt_baro = 0
+        self.alt_geom = 0
         self.true_hdg = 0
         self.nav_hdg = 0
         self.prev_lat = 0
@@ -44,7 +46,7 @@ class Plane:
 
         self.position_updated = False
         self.stale_count = 0
-        self.status = {}
+        self.status = status
 
         self.update_status(status)
 
@@ -53,44 +55,49 @@ class Plane:
         class method for updating aircraft state information
         """
 
-        self.lat = status["lat"]
-        self.lon = status["lon"]
-        self.alt_baro = status["alt_baro"]
-        if "nav_heading" in status:
-            self.nav_hdg = status["nav_heading"]
-        if "true_heading" in status:
-            self.true_hdg = status["true_heading"]
-        self.time = time.time_ns()
+        missing = [k for k in REQUIRED_STATUS_UPDATE_KEYS if k not in status]
+        if missing:
+            logging.error(f"can't update {self.registry} missing keys: {missing} ")
+        else:
 
-        if self.lat != self.prev_lat or self.lon != self.prev_lon:
-            printstr = f"position update: flight:{self.flight}, t-r: {self.type}-{self.registry},  time: {self.time} now at lat:{self.lat}, lon:{self.lon}, alt:{self.alt_baro}, hdg: {self.nav_hdg}, vertical_speed (ft/min): {int(self.vertical_speed)}"
-            write_simple_msg_to_log(printstr)
-            logging.debug(printstr)
-            self.prev_lat = self.lat
-            self.prev_lon = self.lon
-            self.prev_alt_baro = self.alt_baro
-            self.prev_nav_hdg = self.nav_hdg
-            self.position_updated = True
-            self.stale_count = 0
+            self.lat = status["lat"]
+            self.lon = status["lon"]
+            self.alt_baro = status["alt_baro"]
+            if "nav_heading" in status:
+                self.nav_hdg = status["nav_heading"]
+            if "true_heading" in status:
+                self.true_hdg = status["true_heading"]
+            self.time = time.time_ns()
 
-            if self.alt_baro != "ground":
-                # self.previous_altitudes.append(self.alt_baro)
-                self.vertical_speed = self.calculate_vertical_speed()
-                # self.previous_altitudes = self.previous_altitudes[0:10]
+            if self.lat != self.prev_lat or self.lon != self.prev_lon:
+                printstr = f"position update: flight:{self.flight}, t-r: {self.type}-{self.registry},  time: {self.time} now at lat:{self.lat}, lon:{self.lon}, alt:{self.alt_baro}, hdg: {self.nav_hdg}, vertical_speed (ft/min): {int(self.vertical_speed)}"
+                write_simple_msg_to_log(printstr)
+                logging.debug(printstr)
+                self.prev_lat = self.lat
+                self.prev_lon = self.lon
+                self.prev_alt_baro = self.alt_baro
+                self.prev_nav_hdg = self.nav_hdg
+                self.position_updated = True
+                self.stale_count = 0
+
+                if self.alt_baro != "ground":
+                    # self.previous_altitudes.append(self.alt_baro)
+                    self.vertical_speed = self.calculate_vertical_speed()
+                    # self.previous_altitudes = self.previous_altitudes[0:10]
+
+                else:
+                    if self.previous_altitudes:
+                        self.previous_altitudes = []
+                        self.vertical_speed = 0
 
             else:
-                if self.previous_altitudes:
-                    self.previous_altitudes = []
-                    self.vertical_speed = 0
-
-        else:
-            self.position_updated = False
-            self.stale_count += 1
-        # not all ADSB sources include "now" field so pack an extra timestamp just in case
-        status["time_ns"] = self.time
-        self.status = status
-        self.previous_statuses.append(status)
-        self.previous_statuses = self.previous_statuses[0:10]
+                self.position_updated = False
+                self.stale_count += 1
+            # not all ADSB sources include "now" field so pack an extra timestamp just in case
+            status["time_ns"] = self.time
+            self.status = status
+            self.previous_statuses.append(status)
+            self.previous_statuses = self.previous_statuses[0:10]
 
     def calculate_vertical_speed(self):
         """
@@ -124,7 +131,13 @@ class Plane:
         distance_2d = math.sqrt(ned[0] ** 2 + ned[1] ** 2)
         distance_3d = math.sqrt(ned[0] ** 2 + ned[1] ** 2 + ned[2] ** 2)
 
-        distance = {"north": ned[0], "east": ned[1], "down": ned[2], "horizontal": distance_2d, "spherical": distance_3d}
+        distance = {
+            "north": ned[0],
+            "east": ned[1],
+            "down": ned[2],
+            "horizontal": distance_2d,
+            "spherical": distance_3d,
+        }
 
         return distance
 
