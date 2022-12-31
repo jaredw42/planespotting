@@ -28,7 +28,7 @@ logging.set_verbosity(logging.DEBUG)
 AOI_MSG_PATH = Path(DEFAULT_LOG_DIR, "aoi_messages.txt")
 ADSB_CATEGORY_HEAVY = "A5"
 MONITORED_CATEGORIES = [ADSB_CATEGORY_HEAVY]
-MONITORED_LOCATIONS = ["foster_city_southeast_large", "bayside_2000m", "bayside_5000m", "emeryville_10km"]
+MONITORED_LOCATIONS = ["foster_city_southeast_large", "bayside_2000m", "bayside_5000m", "bayside_12km" "emeryville_10km"]
 
 LOGGER_INFO_OUTPUT_SECS = 30  # [s]
 
@@ -47,7 +47,7 @@ def get_aoi_locations():
 
 def update_tracked_plane_information(plane: Plane, data: dict, location: dict) -> None:
     """
-    update plane state with latest message.
+    update plane state with latest message and calculate distance and direction to primary monitoring point
     """
     coords = location["coordinates"]
     name = location["name"]
@@ -77,14 +77,14 @@ def check_if_inside_aois(plane: Plane, aois: list = None):
                     entered = True
                 # do a cheap bounding box check before raycasting check
                 elif (
-                    loc["type"] == "poly"
+                    loc["type"] == "polygon"
                     and plane.check_coarse_bounding_box(loc["coordinates"])
                     and plane.check_point_by_ray_casting(loc["coordinates"])
                 ):
                     entered = True
 
                 if entered:
-                    logmsg = f"{datetime.now()}, {time.time_ns()}: {plane.flight}, {plane.type} has entered {aoi}. Alt: {plane.alt_baro:.0f}, Hdg: {plane.nav_hdg:.0f} VS: {plane.vertical_speed:.0f}"
+                    logmsg = f"{datetime.now()}, {time.time_ns()}: {plane.flight}, {plane.registry}, {plane.type} has entered {aoi}. Alt: {plane.alt_baro:.0f}, Hdg: {plane.nav_hdg:.0f} VS: {plane.vertical_speed:.0f}"
                     logging.info(logmsg)
                     write_simple_msg_to_log(logmsg, AOI_MSG_PATH)
                     plane.entered_aois.append(aoi)
@@ -131,7 +131,7 @@ def monitor_adsb_radio_traffic():
                         total_seen += 1
         if time.monotonic() - log_update_t > LOGGER_INFO_OUTPUT_SECS:
             logging.debug(
-                f"monitoring {len(tracked_planes)} A5 aircraft. monitor running for {time.time() - stream_start_time:.1f}s. A5 aircraft seen: {total_seen}"
+                f"monitoring {len(tracked_planes)} A5 aircraft. monitor running for {(time.time() - stream_start_time)/3600:.1f}h. A5 aircraft seen: {total_seen}"
             )
             log_update_t = time.monotonic()
 
