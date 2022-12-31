@@ -4,8 +4,9 @@ starts an AdsbRadioStreamer and watches for aircraft of interest.
 calculates range and bearing to each aircraft.
 assumes ADSB json stream has been fed database file with registry/type information
 """
+from asyncore import write
 from copy import copy
-from decimal import Decimal
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -18,30 +19,26 @@ from absl import logging
 
 from plane import Plane
 from utils import (
+    DEFAULT_LOG_DIR,
     start_adsb_radio_listener,
+    write_simple_msg_to_log,
     write_single_adsb_response_to_log,
 )
 
 # constants
+logging.set_verbosity(logging.DEBUG)
+AOI_MSG_PATH = Path(DEFAULT_LOG_DIR, "aoi_messages.txt")
 ADSB_CATEGORY_HEAVY = "A5"
 MONITORED_CATEGORIES = [ADSB_CATEGORY_HEAVY]
-logging.set_verbosity(logging.DEBUG)
+MONITORED_LOCATIONS = ["foster_city_southeast_large"]
 
 LOGGER_INFO_OUTPUT_SECS = 30  # [s]
-
-AEROAPI_BASE_URL = "https://aeroapi.flightaware.com/aeroapi"
-AEROAPI_KEY = os.environ["AEROAPI_KEY"]
-AEROAPI = requests.Session()
-AEROAPI.headers.update({"x-apikey": AEROAPI_KEY})
-
-STATUS_EN_ROUTE = "En Route"
-
 
 def get_aoi_locations():
     """
     load json file with areas of interest.
     """
-    locpath = Path(os.getcwd(), "resources/locations.json")
+    locpath = Path(os.getcwd(), "resources/locations2.json")
 
     with open(locpath, "rt") as f:
         locations = json.load(f)
@@ -49,25 +46,7 @@ def get_aoi_locations():
     return locations
 
 
-def get_flight_data_from_aeroapi(flight: str):
-    """
-    given a flight number, generate a aeroapi response request
-    and filter by flights currently 'En Route'
-    """
 
-    headers = {"x-apikey": AEROAPI_KEY}
-    flight = flight.strip()
-    api_resource = f"/flights/{flight}"
-    payload = {"max_pages": 1}
-    url = f"{AEROAPI_BASE_URL}{api_resource}"
-    response = requests.request("GET", url, headers=headers, params=payload)
-    if response.status_code == 200:
-        enroute = [flt for flt in response.text if "En Route" in flt["status"]]
-        if enroute:
-            logging.info(f"En Route data found for {flight}")
-            return enroute[0]
-        else:
-            logging.error(f"no info found for {flight}")
 
 
 def update_tracked_plane_information(plane: Plane, data: dict, location) -> None:
@@ -80,9 +59,26 @@ def update_tracked_plane_information(plane: Plane, data: dict, location) -> None
     distance = plane.calculate_distance_to_point(coords)["spherical"] / 1000.0
     bearing = plane.calculate_bearing_from_point(coords)
     logging.info(
-        f"flight {plane.flight} ({plane.type}) is {distance:.1f} km, {bearing:.1f} deg from {name}. Alt: {plane.alt_baro}, VS: {plane.vertical_speed:.1f} "
+        f"flight {plane.flight} ({plane.type}) is {distance:.1f} km, {bearing:.1f} deg from {name}. Alt: {plane.alt_baro}, VS: {plane.vertical_speed:.1f}, HDG: {plane.nav_hdg} "
     )
 
+def check_if_inside_aoi(plane: Plane, aois=None):
+    if not aois:
+        aois = MONITORED_LOCATIONS
+
+    for aoi in aois:
+
+        if aoi not in plane.entered_aois:
+            loc = locations['air_aois'][aoi]
+            inside_coarse = plane.check_coarse_bounding_box(loc['coordinates'])
+            if inside_coarse:
+                inside_fine = plane.check_point_by_ray_casting(loc['coordinates'])
+
+                if inside_fine:
+                    logmsg = f"{datetime.now()}, {time.time_ns()}: {plane.flight}, {plane.type} has entered {loc['name']}. Alt: {plane.alt_baro}, Hdg: {plane.nav_hdg} VS: {plane.vertical_speed}"
+                    logging.info(logmsg)
+                    write_simple_msg_to_log(logmsg, AOI_MSG_PATH)
+                    plane.entered_aois.append(aoi)
 
 def monitor_adsb_radio_traffic():
     """
@@ -94,8 +90,9 @@ def monitor_adsb_radio_traffic():
 
     tracked_planes = {}
     location_name = sys.argv[-1]
+    global locations
     locations = get_aoi_locations()
-    monitored_loc = locations[location_name]
+    monitored_loc = locations['ground_aois'][location_name]
     total_seen = 0
     log_update_t = 0
     while adsbstreamer:
@@ -113,6 +110,7 @@ def monitor_adsb_radio_traffic():
                             try:
                                 update_tracked_plane_information(tracked_planes[adsbhex], adsb, monitored_loc)
                                 write_single_adsb_response_to_log(tracked_planes[adsbhex])
+                                check_if_inside_aoi(tracked_planes[adsbhex])
                             except Exception as e:
                                 logging.error(f"couldn't update {adsb}, {e}")
                     else:

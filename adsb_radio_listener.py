@@ -1,7 +1,6 @@
 """
 adsb_radio_listener.py
 thread class that connects to a readsb net-json port and stores messages by adsb hex in a managed dict
-
 """
 import json
 import socket
@@ -80,7 +79,6 @@ class AdsbRadioStreamer(Thread):
             data = self.sock.recv(blksize)
             self.process_incoming_data(data)
             i += 1
-            x = int(time.time())
             if time.monotonic() - log_update_t > DEBUG_MSG_OUTPUT_SEC:
 
                 cleared = self.clear_stale_data_entries()

@@ -43,6 +43,7 @@ class Plane:
 
         self.previous_altitudes = []
         self.previous_statuses = []
+        self.entered_aois = []
 
         self.position_updated = False
         self.stale_count = 0
@@ -167,7 +168,32 @@ class Plane:
         a rough bounding box and simply check if the object is inside the box.
         this may return some false positives (to be checked later) but never a false negative
         """
-        pass
+        minlat = min([coord[0] for coord in poly])
+        maxlat = max([coord[0] for coord in poly])
+        minlon = min([coord[1] for coord in poly])
+        maxlon = max([coord[1] for coord in poly])
+
+        if minlat < self.lat < maxlat and minlon < self.lon < maxlon:
+            return True
+
+    def check_point_by_ray_casting(self, poly):
+        """
+        adg
+        """
+        vertx = [point[1] for point in poly]
+        verty = [point[0] for point in poly]
+        # Number of vertices in the polygon
+        nvert = len(poly)
+        c = 0
+        for i in range(0, nvert):
+            j = i - 1 if i != 0 else nvert - 1
+            if ((verty[i] > self.lat) != (verty[j] > self.lat)) and (
+                self.lon < (vertx[j] - vertx[i]) * (self.lat - verty[i]) / (verty[j] - verty[i]) + vertx[i]
+            ):
+                c += 1
+        # If odd, that means that we are inside the polygon
+        if c % 2 == 1:
+            return True
 
 
 if __name__ == "__main__":
