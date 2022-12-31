@@ -41,7 +41,6 @@ class Plane:
 
         self.vertical_speed = 0  # [ft/minute]
 
-        self.previous_altitudes = []
         self.previous_statuses = []
         self.entered_aois = []
 
@@ -82,14 +81,10 @@ class Plane:
                 self.stale_count = 0
 
                 if self.alt_baro != "ground":
-                    # self.previous_altitudes.append(self.alt_baro)
                     self.vertical_speed = self.calculate_vertical_speed()
-                    # self.previous_altitudes = self.previous_altitudes[0:10]
 
                 else:
-                    if self.previous_altitudes:
-                        self.previous_altitudes = []
-                        self.vertical_speed = 0
+                    self.vertical_speed = 0
 
             else:
                 self.position_updated = False
@@ -144,9 +139,11 @@ class Plane:
 
     def calculate_bearing_from_point(self, coords: list[float]) -> float:
         """
-        θ = lat, L = lon
+        calculate absolute bearing (azimumth) from a given coordinate to the Plane object lat/lon
+        θ = lat
+        L = lon
         X = cos θb * sin ∆L
-        Y = cos θa * sin θb – sin θa * cos θb * cos ∆L
+        Y = cos θa * sin θb - sin θa * cos θb * cos ∆L
         β = atan2(X,Y) [radians]
         a = coords
         b = self
@@ -178,7 +175,9 @@ class Plane:
 
     def check_point_by_ray_casting(self, poly):
         """
-        adg
+        use ray casting technique
+        https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
+        https://wrfranklin.org/Research/Short_Notes/pnpoly.html
         """
         vertx = [point[1] for point in poly]
         verty = [point[0] for point in poly]
@@ -194,6 +193,13 @@ class Plane:
         # If odd, that means that we are inside the polygon
         if c % 2 == 1:
             return True
+
+    def check_point_inside_circle(self, circle: dict) -> bool:
+        """
+        check if plane object is inside circular AOI
+        """
+        distance = self.calculate_distance_to_point(circle["center_point"])
+        return True if distance["horizontal"] < circle["radius"] else False
 
 
 if __name__ == "__main__":

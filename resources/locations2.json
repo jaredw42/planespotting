@@ -9,12 +9,21 @@
         0
       ]
     },
-    "bayside_tower_1": {}
+    "bayside_tower_1": {
+      "name": "bayside_tower_1",
+      "type": "point",
+      "coordinates": [
+        37.5715624,
+        -122.266674,
+        25.9
+      ]
+    }
   },
   "air_aois": {
     "foster_city_southeast_large": {
       "name": "foster_city_southeast_large",
       "type": "polygon",
+      "ceiling": 5000,
       "coordinates": [
         [
           37.5706681564353,
@@ -68,7 +77,31 @@
       ],
       "radius": 2000,
       "floor": 0,
-      "ceiling": 2500
+      "ceiling": 5000
+    },
+    "bayside_5000m": {
+      "name": "bayside_5000m",
+      "type": "circle",
+      "center_point": [
+        37.5715624,
+        -122.266674,
+        25.9
+      ],
+      "radius": 5000,
+      "floor": 0,
+      "ceiling": 5000
+    },
+    "emeryville_10km": {
+      "name": "emeryville_10km",
+      "type": "circle",
+      "center_point": [
+        37.82432,
+        -122.2884593,
+        0
+      ],
+      "radius": 10000,
+      "floor": 0,
+      "ceiling": 5000
     }
   }
 }
