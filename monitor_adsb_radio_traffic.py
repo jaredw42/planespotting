@@ -124,7 +124,7 @@ def monitor_adsb_radio_traffic():
                             except Exception as e:
                                 logging.error(f"couldn't update {adsb}, {e}")
                     else:
-                        if "r" and "flight"  in adsb:
+                        if "r" in adsb and "flight"  in adsb:
                             tracked_planes[adsbhex] = Plane(adsb["r"], adsb["flight"], adsb)
                             logging.info(
                                 f"created new tracking entry: flight: {adsb['flight']}, type: {adsb['t']}, registry: {adsb['r']} "
