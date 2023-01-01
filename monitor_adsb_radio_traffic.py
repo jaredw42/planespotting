@@ -124,11 +124,12 @@ def monitor_adsb_radio_traffic():
                             except Exception as e:
                                 logging.error(f"couldn't update {adsb}, {e}")
                     else:
-                        tracked_planes[adsbhex] = Plane(adsb["r"], adsb["flight"], adsb)
-                        logging.info(
-                            f"created new tracking entry: flight: {adsb['flight']}, type: {adsb['t']}, registry: {adsb['r']} "
-                        )
-                        total_seen += 1
+                        if "r" and "flight"  in adsb:
+                            tracked_planes[adsbhex] = Plane(adsb["r"], adsb["flight"], adsb)
+                            logging.info(
+                                f"created new tracking entry: flight: {adsb['flight']}, type: {adsb['t']}, registry: {adsb['r']} "
+                            )
+                            total_seen += 1
         if time.monotonic() - log_update_t > LOGGER_INFO_OUTPUT_SECS:
             logging.debug(
                 f"monitoring {len(tracked_planes)} A5 aircraft. monitor running for {(time.time() - stream_start_time)/3600:.1f}h. A5 aircraft seen: {total_seen}"
