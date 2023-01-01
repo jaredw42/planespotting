@@ -28,7 +28,7 @@ logging.set_verbosity(logging.DEBUG)
 AOI_MSG_PATH = Path(DEFAULT_LOG_DIR, "aoi_messages.txt")
 ADSB_CATEGORY_HEAVY = "A5"
 MONITORED_CATEGORIES = [ADSB_CATEGORY_HEAVY]
-MONITORED_LOCATIONS = ["foster_city_southeast_large", "bayside_2000m", "bayside_5000m", "bayside_12km", "emeryville_10km"]
+MONITORED_LOCATIONS = ["foster_city_southeast_large", "bayside_2000m", "bayside_5000m", "bayside_12km", "bayside_50km", "emeryville_10km"]
 
 LOGGER_INFO_OUTPUT_SECS = 30  # [s]
 
