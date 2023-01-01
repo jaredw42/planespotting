@@ -114,6 +114,18 @@
       "radius": 10000,
       "floor": 0,
       "ceiling": 5000
+    },
+    "bayside_50km": {
+      "name": "bayside_50km",
+      "type": "circle",
+      "center_point": [
+        37.5715624,
+        -122.266674,
+        25.9
+      ],
+      "radius": 12000,
+      "floor": 0,
+      "ceiling": 50000
     }
   }
 }
