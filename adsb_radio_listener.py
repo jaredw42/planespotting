@@ -60,13 +60,15 @@ class AdsbRadioStreamer(Thread):
                     self.data[jsonmsg["hex"]] = jsonmsg
                     # store last decoded timestamp for timeout checking
                     self.now = jsonmsg["now"]
+
                 except json.JSONDecodeError:
-                    logging.info(f"couldnt decode {msg}")
+                    pass
+                    # logging.info(f"couldnt decode json from {msg}")
                     #
                 except Exception as e:
                     # TODO - remove this general case
                     logging.info(e)
-                    logging.info(f"couldnt decode {msg}")
+                    logging.info(f"general exception: {msg}")
 
     def stream_adsb_json_data(self, blksize=DEFAULT_RCV_BYTES):
         """

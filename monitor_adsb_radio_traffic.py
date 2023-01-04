@@ -14,7 +14,7 @@ import time
 
 from absl import logging
 
-
+from adsb_radio_listener import LOCAL_IP, EXTERNAL_IP
 from plane import Plane
 from utils import (
     DEFAULT_LOG_DIR,
@@ -28,7 +28,7 @@ logging.set_verbosity(logging.DEBUG)
 AOI_MSG_PATH = Path(DEFAULT_LOG_DIR, "aoi_messages.txt")
 ADSB_CATEGORY_HEAVY = "A5"
 MONITORED_CATEGORIES = [ADSB_CATEGORY_HEAVY]
-MONITORED_LOCATIONS = ["foster_city_southeast_large", "bayside_2000m", "bayside_5000m", "bayside_12km", "bayside_50km", "emeryville_10km"]
+MONITORED_LOCATIONS = ["foster_city_southeast_large", "bayside_2000m", "bayside_5000m", "bayside_50km", "bayside_12km",  "emeryville_10km"]
 
 LOGGER_INFO_OUTPUT_SECS = 30  # [s]
 
@@ -95,7 +95,7 @@ def monitor_adsb_radio_traffic():
     entry point for monitoring script
     """
 
-    adsbstreamer, streamdata = start_adsb_radio_listener(ip="192.168.0.151")
+    adsbstreamer, streamdata = start_adsb_radio_listener(ip=EXTERNAL_IP)
     stream_start_time = time.time()
 
     tracked_planes = {}
