@@ -12,7 +12,7 @@ from multiprocessing import Process, Manager
 from adsb_radio_listener import AdsbRadioStreamer, LOCAL_IP, EXTERNAL_IP, READSB_JSON_PORT
 
 
-DEFAULT_LOG_DIR = Path(Path.home(), f"data/planespotting/ {str(datetime.date.today()).replace('-','')}")
+DEFAULT_LOG_DIR = Path(Path.home(), f"data/planespotting/{str(datetime.date.today()).replace('-','')}")
 DEFAULT_SIMPLE_LOG_NAME = Path(DEFAULT_LOG_DIR, "planespotting_msgs.txt")
 DEFAULT_HEX_LOG_PATH = Path(os.getcwd(), "resources/known_adsb_hex_codes.json")
 

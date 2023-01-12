@@ -1,7 +1,6 @@
 """
 adsb_radio_listener.py
 thread class that connects to a readsb net-json port and stores messages by adsb hex in a managed dict
-
 """
 import json
 import socket
@@ -61,13 +60,15 @@ class AdsbRadioStreamer(Thread):
                     self.data[jsonmsg["hex"]] = jsonmsg
                     # store last decoded timestamp for timeout checking
                     self.now = jsonmsg["now"]
+
                 except json.JSONDecodeError:
-                    logging.info(f"couldnt decode {msg}")
+                    pass
+                    # logging.info(f"couldnt decode json from {msg}")
                     #
                 except Exception as e:
                     # TODO - remove this general case
                     logging.info(e)
-                    logging.info(f"couldnt decode {msg}")
+                    logging.info(f"general exception: {msg}")
 
     def stream_adsb_json_data(self, blksize=DEFAULT_RCV_BYTES):
         """
@@ -80,7 +81,6 @@ class AdsbRadioStreamer(Thread):
             data = self.sock.recv(blksize)
             self.process_incoming_data(data)
             i += 1
-            x = int(time.time())
             if time.monotonic() - log_update_t > DEBUG_MSG_OUTPUT_SEC:
 
                 cleared = self.clear_stale_data_entries()
